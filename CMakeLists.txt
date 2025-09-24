@@ -210,6 +210,17 @@ add_library(souperInfer STATIC
   ${SOUPER_INFER_FILES}
 )
 
+set(SOUPER_GENERALIZE_FILES
+  lib/Generalize/Generalize.cpp
+  lib/Generalize/Reducer.cpp
+  include/souper/Generalize/Generalize.h
+  include/souper/Generalize/Reducer.h
+)
+
+add_library(souperGeneralize STATIC
+  ${SOUPER_GENERALIZE_FILES}
+)
+
 set(SOUPER_INST_FILES
   lib/Inst/Inst.cpp
   include/souper/Inst/Inst.h
@@ -301,6 +312,10 @@ add_executable(souper-check
   tools/souper-check.cpp
 )
 
+add_executable(hydra
+  tools/hydra.cpp
+)
+
 add_executable(souper-interpret
   tools/souper-interpret.cpp
 )
@@ -371,9 +386,9 @@ configure_file(
   COPYONLY
 )
 
-foreach(target souper internal-solver-test lexer-test parser-test souper-check count-insts
+foreach(target souper internal-solver-test lexer-test parser-test souper-check hydra count-insts
                souper2llvm souper-interpret
-               souperExtractor souperInfer souperInst souperKVStore souperParser
+               souperExtractor souperInfer souperGeneralize souperInst souperKVStore souperParser
                souperSMTLIB2 souperTool souperPass souperPassProfileAll kleeExpr
                souperCodegen)
   set_target_properties(${target} PROPERTIES COMPILE_FLAGS "${LLVM_CXXFLAGS}")
@@ -388,6 +403,7 @@ endforeach()
 target_link_libraries(kleeExpr ${LLVM_LIBS} ${LLVM_LDFLAGS})
 target_link_libraries(souperExtractor souperParser souperKVStore souperInfer souperInst kleeExpr souperCodegen)
 target_link_libraries(souperInfer souperExtractor ${LLVM_LIBS} ${LLVM_LDFLAGS} ${Z3_LIBRARY})
+target_link_libraries(souperGeneralize souperInfer ${LLVM_LIBS} ${LLVM_LDFLAGS} ${Z3_LIBRARY})
 target_link_libraries(souperInst ${LLVM_LIBS} ${LLVM_LDFLAGS})
 target_link_libraries(souperKVStore ${HIREDIS_LIBRARY} ${LLVM_LIBS} ${LLVM_LDFLAGS})
 target_link_libraries(souperParser souperInst ${LLVM_LIBS} ${LLVM_LDFLAGS} ${ALIVE_LIBRARY})
@@ -406,6 +422,7 @@ target_link_libraries(internal-solver-test souperSMTLIB2)
 target_link_libraries(lexer-test souperParser)
 target_link_libraries(parser-test souperParser)
 target_link_libraries(souper-check souperTool souperExtractor souperKVStore souperSMTLIB2 souperParser ${HIREDIS_LIBRARY} ${ALIVE_LIBRARY} ${Z3_LIBRARY})
+target_link_libraries(hydra souperTool souperGeneralize souperExtractor souperKVStore souperSMTLIB2 souperParser ${HIREDIS_LIBRARY} ${ALIVE_LIBRARY} ${Z3_LIBRARY})
 target_link_libraries(souper-interpret souperTool souperExtractor souperKVStore souperSMTLIB2 souperParser ${HIREDIS_LIBRARY} ${ALIVE_LIBRARY} ${Z3_LIBRARY})
 target_link_libraries(count-insts souperParser)
 target_link_libraries(souper2llvm souperParser souperCodegen)

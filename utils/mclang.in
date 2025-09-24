@@ -1,0 +1,103 @@
+#!/usr/bin/env perl
+
+# Copyright 2014 The Souper Authors. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+use warnings;
+use strict;
+use File::Temp;
+
+sub compiling() {
+    foreach my $arg (@ARGV) {
+        return 1
+            if ($arg =~ /\.c$|\.cpp$|\.CC$|\.c\+\+$|\.cc$|\.cxx$|\.C$|\.c\+$/);
+    }
+    return 0;
+}
+
+sub linkp() {
+    foreach my $arg (@ARGV) {
+        return 0 if ($arg eq "-S" || $arg eq "-c" || $arg eq "-shared");
+    }
+    return 1;
+}
+
+if ($0 =~ /clang$/) {
+    unshift @ARGV, "@LLVM_BINDIR@/clang";
+} elsif ($0 =~ /clang\+\+$/) {
+    unshift @ARGV, "@LLVM_BINDIR@/clang++";
+} else {
+    die "Didn't expect sclang to be invoked as '$0'";
+}
+
+foreach my $arg (@ARGV) {
+    if ($arg eq "-help" || $arg eq "--help") {
+	print <<EOF;
+
+SOUPER_DISABLE_LLVM_PEEPHOLES -- Disable the invocation of llvm peephole
+transformations in compilation.
+
+SOUPER_MATCHER_LIB -- Specify the path to the matcher shared library.
+
+SOUPER_BISECT_LO -- Specify the lower bound of the bisection search.
+
+SOUPER_BISECT_HI -- Specify the upper bound of the bisection search.
+
+EOF
+        exit(-1);
+    }
+}
+
+sub getenv($) {
+    (my $e) = @_;
+    die "oops '$e'" unless $e =~ /^SOUPER_/;
+    return undef unless exists($ENV{$e});
+    return $ENV{$e};
+}
+
+my $souper = 1;
+
+my $souperlib = "NONE";
+
+$souperlib = getenv("SOUPER_MATCHER_LIB");
+
+if ($souper && $souperlib) {
+  push @ARGV, ("-Xclang", "-load", "-Xclang", "$souperlib");
+  push @ARGV, ("-fpass-plugin=$souperlib");
+} else {
+  die "Unpecified SOUPER_MATCHER_LIB."
+}
+
+my $lo = "NONE";
+$lo = getenv("SOUPER_BISECT_LO");
+my $hi = "NONE";
+$hi = getenv("SOUPER_BISECT_HI");
+
+if ($lo && $hi) {
+  push @ARGV, ("-Xclang", "-low=", "$lo");
+  push @ARGV, ("-Xclang", "-high=", "$hi");
+}
+
+my $pba = "NONE";
+
+$pba = getenv("SOUPER_PRINT_BEFORE_AFTER");
+if ($pba) {
+  push @ARGV, ("-Xclang", "-pba");
+}
+
+if (getenv("SOUPER_DISABLE_LLVM_PEEPHOLES") && $souper) {
+    push @ARGV, ("-mllvm", "-disable-peepholes");
+}
+
+exec @ARGV;

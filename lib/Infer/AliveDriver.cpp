@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/ADT/StringExtras.h"
 
 #include <iostream>
 #include <memory>
@@ -38,11 +39,20 @@ namespace {
 
 static llvm::cl::opt<bool> DisableUndefInput("alive-disable-undef-input",
   llvm::cl::desc("Assume inputs can not be undef (default = false)"),
-  llvm::cl::init(false));
+  llvm::cl::init(true));
 
 static llvm::cl::opt<bool> SkipAliveSolver("alive-skip-solver",
   llvm::cl::desc("Omit Alive solver calls for performance testing (default = false)"),
   llvm::cl::init(false));
+
+static llvm::cl::opt<bool> WidthIndepOpt("alive-all-widths",
+  llvm::cl::desc("Ignore Souper type widths and verify for all widths."),
+  llvm::cl::init(false));
+
+static llvm::cl::opt<bool> ShowValidWidths("show-valid-widths",
+  llvm::cl::desc("Show widths for which the input is valid."),
+  llvm::cl::init(false));
+
 
 class FunctionBuilder {
 public:
@@ -52,6 +62,15 @@ public:
   IR::Value *freeze(IR::Type &t, std::string name, A a) {
     return append
       (std::make_unique<IR::Freeze>(t, std::move(name), *toValue(t, a)));
+  }
+
+  template <typename A>
+  IR::Value *width(IR::Type &t, std::string name, A a) {
+    auto fc = std::make_unique<IR::ConstantFn>(IR::ConstantFn(t, "width", {toValue(t, a)}));
+    // make_unique fails template type deduction
+    auto ret = fc.get();
+    F.addConstant(std::move(fc));
+    return ret;
   }
 
   IR::Value *undef(IR::Type &t, std::string name) {
@@ -175,15 +194,12 @@ private:
     if (auto It = identifiers.find(x); It != identifiers.end()) {
       return It->second;
     } else {
-      if (x.find(souper::ReservedConstPrefix) != std::string::npos) {
-        auto i = std::make_unique<IR::ConstantInput>(t, std::move(x));
-        auto ptr = i.get();
-//         F.addInput(std::move(i));
-        F.addConstant(std::move(i));
-        identifiers[x] = ptr;
-        return ptr;
+      IR::ParamAttrs Attrs;
+      if (x.find("var_sym") != std::string::npos) {
+        Attrs = IR::ParamAttrs::NoUndef;
       }
       auto i = std::make_unique<IR::Input>(t, std::move(x));
+      i->setAttributes(std::move(Attrs));
       auto ptr = i.get();
       F.addInput(std::move(i));
       identifiers[x] = ptr;
@@ -249,10 +265,14 @@ synthesizeConstantUsingSolver(tools::Transform &t,
 }
 
 souper::AliveDriver::AliveDriver(Inst *LHS_, Inst *PreCondition_, InstContext &IC_,
-                                 std::vector<Inst *> ExtraInputs)
+                                 const std::vector<Inst *> &ExtraInputs, bool WidthIndep)
     : LHS(LHS_), PreCondition(PreCondition_), IC(IC_) {
-  smt::set_query_timeout(std::to_string(60000)); // milliseconds
+  smt::set_query_timeout(std::to_string(10000)); // milliseconds
   IsLHS = true;
+  WidthIndependentMode = WidthIndep;
+  if (WidthIndepOpt) {
+    WidthIndependentMode = true;
+  }
   InstNumbers = 101;
   //FIXME: Magic number. 101 is chosen arbitrarily.
   //This should go away once non-input variable names are not discarded
@@ -370,8 +390,13 @@ void souper::AliveDriver::copyInputs(souper::AliveDriver::Cache &To,
                                      IR::Function &RHS) {
   for (auto &[I, Val] : Inputs) {
     if (I->K == Inst::Kind::Var) {
+      IR::ParamAttrs Attrs = IR::ParamAttrs::None;
+      if (Val->getName().find("var_sym") != std::string::npos) {
+        Attrs = IR::ParamAttrs::NoUndef;
+      }
       auto Input = std::make_unique<IR::Input>(Val->getType(),
-                                               std::string(NameMap[I]));
+                                                std::string(NameMap[I]));
+      Input->setAttributes(std::move(Attrs));
       To[I] = Input.get();
       RHS.addInput(std::move(Input));
     }
@@ -380,6 +405,7 @@ void souper::AliveDriver::copyInputs(souper::AliveDriver::Cache &To,
 
 bool souper::AliveDriver::verify (Inst *RHS, Inst *RHSAssumptions) {
   RExprCache.clear();
+  ValidTypings.clear();
   IR::Function RHSF;
   copyInputs(RExprCache, RHSF);
   if (!translateRoot(RHS, RHSAssumptions, RHSF, RExprCache)) {
@@ -401,6 +427,58 @@ bool souper::AliveDriver::verify (Inst *RHS, Inst *RHSAssumptions) {
   t.tgt = std::move(RHSF);
   tools::TransformVerify tv(t, /*check_each_var=*/false);
 
+  auto types = tv.getTypings();
+
+  if (!types.hasSingleTyping()) {
+    unsigned i = 0;
+    size_t correct = 0;
+    size_t incorrect = 0;
+    for (; types; ++types, ++i) {
+      if (DebugLevel > 4) {
+        llvm::errs() << "Typing : " << i << "\r";
+      }
+
+      tv.fixupTypes(types);
+      std::map<const Inst *, size_t> Typing;
+      for (auto &&P : Inputs) {
+        Typing[P.first] = P.second->bits();
+      }
+      if (auto errs = tv.verify()) {
+        if (DebugLevel > 4) {
+          llvm::errs() << "\nInvalid typing: \n";
+          for (auto &&P : Inputs) {
+            llvm::errs() << P.first->Name << ' ' << P.second->bits() << "\t";
+          }
+          llvm::errs() << "\n";
+        }
+        InvalidTypings.push_back(Typing);
+        incorrect++;
+      } else {
+        ValidTypings.push_back(Typing);
+        correct++;
+      }
+    }
+    if (!incorrect && i) {
+      return true;
+    } else if (!correct) {
+      return false;
+    } else {
+      if (ShowValidWidths) {
+        llvm::outs() << "; Partially Valid.\n";
+        std::sort(ValidTypings.begin(), ValidTypings.end(),
+                  [](const auto &A, const auto &B) {return A.begin()->second < B.begin()->second;});
+        for (auto &&P : ValidTypings) {
+          llvm::outs() << "; ";
+          for (auto &&I : P) {
+            llvm::outs() << I.first->Name << ' ' <<  I.second << '\t';
+          }
+          llvm::outs() << '\n';
+        }
+      }
+      return false;
+    }
+  }
+
   if (SkipAliveSolver)
     return false;
 
@@ -421,6 +499,7 @@ bool souper::AliveDriver::verify (Inst *RHS, Inst *RHSAssumptions) {
 
 bool souper::AliveDriver::translateRoot(const souper::Inst *I, const Inst *PC,
                                         IR::Function &F, Cache &ExprCache) {
+
   if (!translateAndCache(I, F, ExprCache)) {
     return false;
   }
@@ -431,11 +510,11 @@ bool souper::AliveDriver::translateRoot(const souper::Inst *I, const Inst *PC,
   translateDemandedBits(I, F, ExprCache);
 
   FunctionBuilder Builder(F);
-  if (PC) {
+  if (PC && !(PC->K == Inst::Const && PC->Val.isAllOnes())) {
     Builder.assume(ExprCache[PC]);
   }
-  Builder.ret(getType(I->Width), ExprCache[I]);
-  F.setType(getType(I->Width));
+  Builder.ret(getType(I->Width, I), ExprCache[I]);
+  F.setType(getType(I->Width, I));
   return true;
 }
 
@@ -480,6 +559,23 @@ bool souper::AliveDriver::translateAndCache(const souper::Inst *I,
     return true; // Already translated
   }
 
+  if (I->K == Inst::KnownOnesP) {
+    auto *VarAndOnes = IC.getInst(Inst::And, I->Width, {I->Ops[0], I->Ops[1]});
+    auto *Eq = IC.getInst(Inst::Eq, 1, {VarAndOnes, I->Ops[1]});
+    auto Ret = translateAndCache(Eq, F, ExprCache);
+    ExprCache[I] = ExprCache[Eq];
+    return Ret;
+  }
+  if (I->K == Inst::KnownZerosP) {
+    auto *FlipZeros = IC.getInst(Inst::Xor, I->Width, {I->Ops[1],
+      IC.getConst(llvm::APInt::getAllOnes(I->Width))});
+    auto *VarNotZeros = IC.getInst(Inst::Or, I->Width, {I->Ops[0], FlipZeros});
+    auto *Eq = IC.getInst(Inst::Eq, 1, {VarNotZeros, FlipZeros});
+    auto Ret = translateAndCache(Eq, F, ExprCache);
+    ExprCache[I] = ExprCache[Eq];
+    return Ret;
+  }
+
   auto Ops = I->Ops;
   if (souper::Inst::isOverflowIntrinsicMain(I->K)) {
     Ops = Ops[0]->Ops;
@@ -516,11 +612,12 @@ bool souper::AliveDriver::translateAndCache(const souper::Inst *I,
     NameMap[I] = Name;
   }
 
-  auto &t = getType(I->Width);
+  auto &t = getType(I->Width, I);
 
   switch (I->K) {
     case souper::Inst::Var: {
       ExprCache[I] = Builder.var(t, Name);
+      // llvm::errs() << "Var: " << Name << "\n";
       if (IsLHS) {
         Inputs.push_back({I, ExprCache[I]});
       }
@@ -557,9 +654,9 @@ bool souper::AliveDriver::translateAndCache(const souper::Inst *I,
       unsigned idx = I->Ops[1]->Val.getLimitedValue();
       assert(idx <= 1 && "Only extractvalue with overflow instructions are supported.");
       if (idx == 0) {
-        t = getType(I->Ops[0]->Width - 1);
+        t = getType(I->Ops[0]->Width - 1, I);
       } else {
-        t = getType(1);
+        t = getType(1, nullptr);
       }
       ExprCache[I] = Builder.extractvalue(t, Name, ExprCache[I->Ops[0]], idx);
       return true;
@@ -578,7 +675,7 @@ bool souper::AliveDriver::translateAndCache(const souper::Inst *I,
 
     #define BINOPOV(SOUPER, ALIVE) case souper::Inst::SOUPER: {  \
       ExprCache[I] = Builder.binOp(getOverflowType               \
-      (I->Ops[0]->Width), Name, ExprCache[Ops[0]],               \
+      (I->Ops[0]->Width, I), Name, ExprCache[Ops[0]],            \
       ExprCache[Ops[1]], IR::BinOp::ALIVE);                      \
       return true;                                               \
     }
@@ -591,7 +688,7 @@ bool souper::AliveDriver::translateAndCache(const souper::Inst *I,
 
     #define FAKEBINOP(SOUPER, ALIVE) case souper::Inst::SOUPER: {\
       ExprCache[I] = Builder.binOp(t, Name, ExprCache[I->Ops[0]],\
-      Builder.val(getType(1), 0), IR::BinOp::ALIVE);             \
+      Builder.val(getType(1, nullptr), 0), IR::BinOp::ALIVE);    \
       return true;                                               \
     }
 
@@ -608,6 +705,7 @@ bool souper::AliveDriver::translateAndCache(const souper::Inst *I,
     BINOPF(MulNUW, Mul, NUW);
     BINOPF(MulNW, Mul, NSW | IR::BinOp::NUW);
     BINOP(And, And);
+    BINOP(DemandedMask, And);
     BINOP(Or, Or);
     BINOP(Xor, Xor);
     BINOP(Shl, Shl);
@@ -679,8 +777,16 @@ bool souper::AliveDriver::translateAndCache(const souper::Inst *I,
     UNARYOP(BSwap, BSwap);
     UNARYOP(BitReverse, BitReverse);
 
+    case souper::Inst::BitWidth: {
+      ExprCache[I] = Builder.width(t, Name /*is ignored*/,
+      ExprCache[I->Ops[0]]);
+      return true;
+    }
+
+    // TODO: Desugar log2. Alive2 only supports log2 for concrete constants.
+
     default:{
-      llvm::outs() << "Unsupported Instruction Kind : " << I->getKindName(I->K) << "\n";
+      llvm::errs() << "Unsupported Instruction Kind : " << I->getKindName(I->K) << "\n";
       return false;
     }
   }
@@ -697,7 +803,9 @@ souper::AliveDriver::translateDataflowFacts(const souper::Inst* I,
       return false;
     }
     FunctionBuilder Builder(F);
-    Builder.assume(ExprCache[DataFlowConstraints]);
+    if (!(DataFlowConstraints->K == Inst::Const && DataFlowConstraints->Val.isAllOnes())) {
+      Builder.assume(ExprCache[DataFlowConstraints]);
+    }
     return true;
   } else {
     return false;
@@ -715,15 +823,35 @@ souper::AliveDriver::translateDemandedBits(const souper::Inst* I,
   assert(DemandedBits.getBitWidth() == I-> Width && "Uninitialized DemandedBits");
 
   if (!DemandedBits.isAllOnes()) {
-    auto DBMask = Builder.val(getType(I->Width), DemandedBits);
+    auto DBMask = Builder.val(getType(I->Width, I), DemandedBits);
 
-    ExprCache[I] = Builder.binOp(getType(I->Width),
+    ExprCache[I] = Builder.binOp(getType(I->Width, I),
                                  "%" + std::to_string(InstNumbers++), ExprCache[I],
                                  DBMask, IR::BinOp::And);
   }
 }
 
-IR::Type &souper::AliveDriver::getType(int Width) {
+IR::Type &souper::AliveDriver::getType(int Width, const Inst *I) {
+  if (WidthIndependentMode && Width != 1) {
+    if (I && SymTypes.find(I) != SymTypes.end()) {
+      return *SymTypes[I];
+    }
+    static int symtypenum = 0;
+
+    if (I->K == Inst::SExt || I->K == Inst::ZExt || I->K == Inst::Trunc) {
+      SymTypes[I] = new IR::ConstrainedSymbolicType("symty_" +
+        std::to_string(symtypenum++) + "_", IR::SymbolicType::Int,
+        [](auto width) {
+          auto Cond = width & (width - smt::expr::mkUInt(1, width.bits()));
+          return (Cond == smt::expr::mkUInt(0, width.bits()));
+        });
+      return *SymTypes[I];
+    }
+    SymTypes[I] = new IR::SymbolicType("symty_" +
+      std::to_string(symtypenum++) + "_", (1 << IR::SymbolicType::Int));
+    return *SymTypes[I];
+  }
+
   std::string n = "i" + std::to_string(Width);
   if (TypeCache.find(n) == TypeCache.end()) {
     TypeCache[n] = new IR::IntType(std::move(n), Width);
@@ -731,10 +859,10 @@ IR::Type &souper::AliveDriver::getType(int Width) {
   return *TypeCache[n];
 }
 
-IR::Type &souper::AliveDriver::getOverflowType(int Width) {
+IR::Type &souper::AliveDriver::getOverflowType(int Width, const Inst *I) {
   std::string n = "o" + std::to_string(Width);
   if (TypeCache.find(n) == TypeCache.end()) {
-    std::vector<IR::Type *> Types = {&getType(Width), &getType(1)};
+    std::vector<IR::Type *> Types = {&getType(Width, I), &getType(1, I)};
     std::vector<bool> Padding = {false, false};
     TypeCache[n] = new IR::StructType(std::move(n),std::move(Types),
                                       std::move(Padding));

@@ -30,7 +30,7 @@ class AliveDriver {
   typedef std::unordered_map<const Inst *, IR::Value *> Cache;
 public:
   AliveDriver(Inst *LHS_, Inst *PreCondition_, InstContext &IC_,
-               std::vector<Inst *> ExtraInputs = {});
+               const std::vector<Inst *> &ExtraInputs = {}, bool WidthIndep = false);
 
   std::map<Inst *, llvm::APInt> synthesizeConstants(souper::Inst *RHS);
   std::map<Inst *, llvm::APInt> synthesizeConstantsWithCegis(souper::Inst *RHS, InstContext &IC);
@@ -40,7 +40,20 @@ public:
     for (auto &&p : TypeCache) {
       delete(p.second);
     }
+    for (auto &&t : SymTypes) {
+      delete(t.second);
+    }
   }
+
+  std::vector<std::map<const Inst *, size_t>> getValidTypings() {
+    return ValidTypings;
+  }
+
+  std::vector<std::map<const Inst *, size_t>> getInvalidTypings() {
+    return InvalidTypings;
+  }
+
+  bool WidthIndependentMode; // This probably doesn't need to be public
 private:
   Inst *LHS, *PreCondition;
 
@@ -50,10 +63,10 @@ private:
   void copyInputs(Cache &To, IR::Function &RHS);
 
   std::unordered_map<std::string, IR::Type*> TypeCache;
+  std::unordered_map<const Inst *, IR::Type *> SymTypes;
 
-
-  IR::Type &getType(int n);
-  IR::Type &getOverflowType(int n);
+  IR::Type &getType(int n, const Inst *I);
+  IR::Type &getOverflowType(int n, const Inst *I);
 
   bool translateRoot(const Inst *I, const Inst *PC, IR::Function &F, Cache &ExprCache);
   bool translateAndCache(const Inst *I, IR::Function &F, Cache &ExprCache);
@@ -64,6 +77,8 @@ private:
   int InstNumbers;
   std::unordered_map<const Inst *, std::string> NamesCache;
   bool IsLHS;
+
+  std::vector<std::map<const Inst *, size_t>> ValidTypings, InvalidTypings;
 
   InstContext &IC;
   smt::smt_initializer smt_init;

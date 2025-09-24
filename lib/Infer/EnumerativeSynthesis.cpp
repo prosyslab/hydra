@@ -32,8 +32,8 @@ extern unsigned DebugLevel;
 using namespace souper;
 using namespace llvm;
 
-static const std::vector<Inst::Kind> UnaryOperators = {
-  Inst::CtPop, Inst::BSwap, Inst::BitReverse, Inst::Cttz, Inst::Ctlz, Inst::Freeze
+static std::vector<Inst::Kind> UnaryOperators = {
+  Inst::CtPop, Inst::BSwap, Inst::BitReverse, Inst::Cttz, Inst::Ctlz
 };
 
 static const std::vector<Inst::Kind> BinaryOperators = {
@@ -64,8 +64,8 @@ static const std::vector<Inst::Kind> TernaryOperators = {
 
 namespace {
   static cl::opt<unsigned> MaxNumInstructions("souper-enumerative-synthesis-max-instructions",
-    cl::desc("Maximum number of instructions to synthesize (default=0)."),
-    cl::init(0));
+    cl::desc("Maximum number of instructions to synthesize (default=1)."),
+    cl::init(1));
   static cl::opt<unsigned> MaxV("souper-enumerative-synthesis-max-verification-load",
     cl::desc("Maximum number of guesses verified at once (default=300)."),
     cl::init(300));
@@ -90,6 +90,15 @@ namespace {
   static cl::opt<bool> IgnoreCost("souper-enumerative-synthesis-ignore-cost",
     cl::desc("Ignore cost of RHSs -- just generate them (default=false)"),
     cl::init(false));
+  static cl::opt<bool> ExternalUses("souper-enumerative-synthesis-external-uses",
+    cl::desc("Ignore cost of values with external uses(default=true)"),
+    cl::init(false)); // FIXME Change back before merging
+  static cl::opt<bool> SynFreeze("souper-synthesize-freeze",
+    cl::desc("Generate Freeze (default=false)"),
+    cl::init(false));
+  static cl::opt<bool> SynLog("souper-synthesize-log",
+    cl::desc("Generate LogB (default=false)"),
+    cl::init(false));
   static cl::opt<unsigned> MaxLHSCands("souper-max-lhs-cands",
     cl::desc("Gather at most this many values from a LHS to use as synthesis inputs (default=10)"),
     cl::init(10));
@@ -104,6 +113,12 @@ namespace {
     cl::init(false));
   static cl::opt<bool> TryShrinkConsts("souper-shrink-consts",
     cl::desc("Try to shrink constants (defaults=false)"),
+    cl::init(false));
+  static cl::opt<bool> SynthesizeLop3("souper-synthesize-lop3",
+    cl::desc("Generate Lop3 (default=false)"),
+    cl::init(false));
+  static cl::opt<bool> OnlySynthesizeLop3("souper-only-synthesize-lop3",
+    cl::desc("Only synthesize lop3(default=false)"),
     cl::init(false));
 }
 
@@ -210,6 +225,42 @@ bool getGuesses(const std::set<Inst *> &Inputs,
 
   std::vector<Inst *> PartialGuesses;
   std::vector<Inst *> Comps(Inputs.begin(), Inputs.end());
+
+
+  // Lop3
+  if (SynthesizeLop3) {
+    auto CompsCopy = Comps;
+    
+    Inst *C1 = IC.createSynthesisConstant(Width, 1);
+    CompsCopy.push_back(C1);
+    Inst *C2 = IC.createSynthesisConstant(Width, 2);
+    CompsCopy.push_back(C2);
+
+    if (!OnlySynthesizeLop3) {
+      Inst *I1 = IC.getReservedInst();
+      CompsCopy.push_back(I1);
+    }
+
+    for (uint32_t i = 0; i < 256; i++) {
+      for (auto X : CompsCopy) {
+        for (auto Y : CompsCopy) {
+          for (auto Z : CompsCopy) {
+            auto N = IC.getInst(Inst::Lop3, Width, { X, Y, Z, IC.getConst(llvm::APInt(8, i)) });
+            addGuess(N, Width, IC, LHSCost, PartialGuesses, TooExpensive);
+          }
+        }
+      }
+    }
+
+    if (OnlySynthesizeLop3) {
+      for (auto Guess : PartialGuesses) {
+        if (!Generate(Guess)) {
+          break;
+        }
+      }
+      return true;
+    }
+  }
 
   // Conversion Operators
   for (auto Comp : Comps)
@@ -691,13 +742,14 @@ std::error_code synthesizeWithKLEE(SynthesisContext &SC, std::vector<Inst *> &RH
       ReplacementContext RC;
       RC.printInst(I, llvm::errs(), /*printNames=*/true);
       llvm::errs() << "\n";
-      llvm::errs() << "Cost = " << souper::cost(I, /*IgnoreDepsWithExternalUses=*/true) << "\n";
+      llvm::errs() << "Cost = " << souper::cost(I, /*IgnoreDepsWithExternalUses=*/ExternalUses) << "\n";
     }
 
     Inst *RHS = nullptr;
     std::set<Inst *> ConstSet;
     std::map <Inst *, llvm::APInt> ResultConstMap;
     souper::getConstants(I, ConstSet);
+    souper::getConstants(SC.LHS, ConstSet);
     bool GuessHasConstant = !ConstSet.empty();
     if (!GuessHasConstant) {
       bool IsSAT;
@@ -728,6 +780,8 @@ std::error_code synthesizeWithKLEE(SynthesisContext &SC, std::vector<Inst *> &RH
       std::map<Inst *, Inst *> InstCache;
       std::map<Block *, Block *> BlockCache;
       RHS = getInstCopy(I, SC.IC, InstCache, BlockCache, &ResultConstMap, false, false);
+      auto NewLHS = getInstCopy(SC.LHS, SC.IC, InstCache, BlockCache, &ResultConstMap, false, false);
+      RHS->Aux = NewLHS;
     }
 
     assert(RHS);
@@ -829,7 +883,7 @@ EnumerativeSynthesis::synthesize(SMTLIBSolver *SMTSolver,
   // do not use LHS itself as a candidate
   Cands.erase(SC.LHS);
 
-  int LHSCost = souper::cost(SC.LHS, /*IgnoreDepsWithExternalUses=*/true) + CostFudge;
+  int LHSCost = souper::cost(SC.LHS, /*IgnoreDepsWithExternalUses=*/ExternalUses) + CostFudge;
   int TooExpensive = 0;
 
   std::vector<Inst *> Inputs;
@@ -905,3 +959,51 @@ EnumerativeSynthesis::synthesize(SMTLIBSolver *SMTSolver,
 
   return EC;
 }
+
+EnumerativeSynthesis::EnumerativeSynthesis() {
+  if (SynFreeze) {
+    UnaryOperators.push_back(Inst::Freeze);
+  }
+  if (SynLog) {
+    UnaryOperators.push_back(Inst::LogB);
+  }
+}
+
+std::vector<Inst *>
+EnumerativeSynthesis::generateExprs(InstContext &IC, size_t CountLimit,
+                                    std::vector<Inst *> Vars, size_t Width) {
+  MaxNumInstructions = CountLimit;
+
+  std::set<Inst*> Visited;
+  std::vector<PruneFunc> PruneFuncs = { [&Visited](Inst *I, std::vector<Inst*> &ReservedInsts)  {
+    return CountPrune(I, ReservedInsts, Visited);
+  }};
+  auto PruneCallback = MkPruneFunc(PruneFuncs);
+
+  std::vector<Inst *> Guesses;
+
+  int TooExpensive = CountLimit + 2;
+
+  int RejectedBecauseTooExpesive = 0;
+
+  for (auto I : Vars) {
+    if (I->Width == Width)
+      addGuess(I, Width, IC, TooExpensive, Guesses, RejectedBecauseTooExpesive);
+  }
+
+  auto Generate = [&Guesses](Inst *Guess) {
+    Guesses.push_back(Guess);
+    return true;
+  };
+
+  std::set<Inst *> VarSet;
+  for (auto &&V : Vars) {
+    VarSet.insert(V);
+  }
+
+  getGuesses(VarSet, Width, TooExpensive, IC, nullptr,
+             nullptr, TooExpensive, PruneCallback, Generate);
+
+  return Guesses;
+}
+

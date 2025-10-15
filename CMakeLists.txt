@@ -415,7 +415,16 @@ endforeach()
 # static
 target_link_libraries(kleeExpr ${LLVM_LIBS} ${LLVM_LDFLAGS})
 target_link_libraries(souperExtractor souperParser souperKVStore souperInst kleeExpr souperCodegen)
-target_link_libraries(souperInfer souperExtractor ${LLVM_LIBS} ${LLVM_LDFLAGS} ${Z3_LIBRARY})
+# target_link_libraries(souperInfer souperExtractor ${LLVM_LIBS} ${LLVM_LDFLAGS} ${Z3_LIBRARY})
+target_link_libraries(souperInfer
+  PRIVATE
+  souperPass      # <-- Add this library
+  souperTool
+  souperExtractor
+  ${LLVM_LIBS}
+  ${LLVM_LDFLAGS}
+  ${Z3_LIBRARY}
+)
 target_link_libraries(souperGeneralize souperInfer ${LLVM_LIBS} ${LLVM_LDFLAGS} ${Z3_LIBRARY})
 target_link_libraries(souperInst ${LLVM_LIBS} ${LLVM_LDFLAGS})
 target_link_libraries(souperKVStore ${HIREDIS_LIBRARY} ${LLVM_LIBS} ${LLVM_LDFLAGS})
@@ -430,17 +439,69 @@ target_link_libraries(souperPass ${PASS_LDFLAGS} ${HIREDIS_LIBRARY} ${ALIVE_LIBR
 target_link_libraries(souperPassProfileAll ${PASS_LDFLAGS} ${HIREDIS_LIBRARY} ${ALIVE_LIBRARY} ${Z3_LIBRARY})
 
 # executables
-target_link_libraries(souper souperInfer souperTool ${Z3_LIBRARY})
+# target_link_libraries(souper souperInfer souperTool ${Z3_LIBRARY})
+target_link_libraries(souper
+  PRIVATE
+  souperTool
+  souperExtractor
+  souperInfer
+  ${ALIVE_LIBRARY} # Add this to ensure Alive2 libs are directly linked
+  ${Z3_LIBRARY}
+)
 target_link_libraries(internal-solver-test souperSMTLIB2)
 target_link_libraries(lexer-test souperParser)
 target_link_libraries(parser-test souperParser)
-target_link_libraries(souper-check souperInfer souperTool kleeExpr ${Z3_LIBRARY})
-target_link_libraries(hydra souperTool souperGeneralize ${Z3_LIBRARY})
-target_link_libraries(matcher-gen souperTool ${Z3_LIBRARY})
-target_link_libraries(souper-interpret souperTool ${Z3_LIBRARY})
+# target_link_libraries(souper-check souperInfer souperTool kleeExpr ${Z3_LIBRARY})
+target_link_libraries(souper-check
+  PRIVATE
+  souperTool
+  souperExtractor
+  souperInfer
+  kleeExpr
+  ${ALIVE_LIBRARY}
+  ${Z3_LIBRARY}
+)
+# target_link_libraries(hydra souperTool souperGeneralize ${Z3_LIBRARY})
+target_link_libraries(hydra
+  PRIVATE
+  souperTool
+  souperGeneralize # This includes Infer and Extractor, but let's be explicit
+  souperExtractor
+  souperInfer
+  ${ALIVE_LIBRARY}
+  ${Z3_LIBRARY}
+)
+# target_link_libraries(matcher-gen PRIVATE souperTool souperExtractor souperGeneralize souperInfer souperParser ${ALIVE_LIBRARY} ${Z3_LIBRARY})
+target_link_libraries(matcher-gen
+  PRIVATE
+  souperGeneralize # Provides souper::profit
+  souperTool
+  souperExtractor
+  souperInfer
+  souperParser     # Provides souper::InfixPrinter
+  ${ALIVE_LIBRARY}
+  ${Z3_LIBRARY}
+)
+# target_link_libraries(souper-interpret souperTool ${Z3_LIBRARY})
+target_link_libraries(souper-interpret
+  PRIVATE
+  souperTool
+  souperExtractor
+  souperInfer      #<-- Provides the missing Interpreter and Analysis functions
+  ${ALIVE_LIBRARY}
+  ${Z3_LIBRARY}
+)
 target_link_libraries(count-insts souperParser)
 target_link_libraries(souper2llvm souperParser souperCodegen)
-target_link_libraries(extractor_tests souperExtractor ${GTEST_LIBS})
+# target_link_libraries(extractor_tests souperExtractor ${GTEST_LIBS})
+target_link_libraries(extractor_tests
+  PRIVATE
+  souperExtractor
+  souperInfer      #<-- Provides UseAlive, AliveDriver, etc.
+  souperPass       #<-- Provides the global Solver 'S'
+  ${ALIVE_LIBRARY}
+  ${GTEST_LIBS}
+)
 target_link_libraries(inst_tests souperInfer souperPass ${GTEST_LIBS})
 target_link_libraries(parser_tests souperParser ${GTEST_LIBS})
 target_link_libraries(codegen_tests souperCodegen souperInst ${GTEST_LIBS})

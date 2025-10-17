@@ -7,3 +7,5 @@ dbuild
 .vscode/
 tools/pass-generator/src/gen.cpp.inc
 souper-build
+hydra-inputs
+hydra-outputs

@@ -63,63 +63,82 @@ static const std::vector<Inst::Kind> TernaryOperators = {
 };
 
 namespace {
-  static cl::opt<unsigned> MaxNumInstructions("souper-enumerative-synthesis-max-instructions",
-    cl::desc("Maximum number of instructions to synthesize (default=1)."),
-    cl::init(1));
-  static cl::opt<unsigned> MaxV("souper-enumerative-synthesis-max-verification-load",
-    cl::desc("Maximum number of guesses verified at once (default=300)."),
-    cl::init(300));
-  static cl::opt<bool, /*ExternalStorage=*/true>
-    AliveFlagParser("souper-use-alive", cl::desc("Use Alive2 as the backend"),
-    cl::Hidden, cl::location(UseAlive), cl::init(false));
-  static cl::opt<bool> LSBPruning("souper-lsb-pruning",
-    cl::desc("Try to prune guesses by looking for a difference in LSB"),
-    cl::init(false));
-  static cl::opt<bool> EnableDataflowPruning("souper-dataflow-pruning",
-    cl::desc("Enable pruning based on dataflow analysis (default=false)"),
-    cl::init(false));
-  static cl::opt<bool> SynthesisConstWithCegisLoop("souper-synthesis-const-with-cegis",
-    cl::desc("Synthesis constants with CEGIS (default=false)"),
-    cl::init(true));
-  static cl::opt<bool> DoubleCheckWithAlive("souper-double-check",
-    cl::desc("Double check synthesis result with alive (default=false)"),
-    cl::init(false));
-  static cl::opt<bool> SkipSolver("souper-enumerative-synthesis-skip-solver",
-    cl::desc("Skip refinement check after generating guesses (default=false)"),
-    cl::init(false));
-  static cl::opt<bool> IgnoreCost("souper-enumerative-synthesis-ignore-cost",
-    cl::desc("Ignore cost of RHSs -- just generate them (default=false)"),
-    cl::init(false));
-  static cl::opt<bool> ExternalUses("souper-enumerative-synthesis-external-uses",
-    cl::desc("Ignore cost of values with external uses(default=true)"),
-    cl::init(false)); // FIXME Change back before merging
-  static cl::opt<bool> SynFreeze("souper-synthesize-freeze",
-    cl::desc("Generate Freeze (default=false)"),
-    cl::init(false));
-  static cl::opt<bool> SynLog("souper-synthesize-log",
-    cl::desc("Generate LogB (default=false)"),
-    cl::init(false));
-  static cl::opt<unsigned> MaxLHSCands("souper-max-lhs-cands",
-    cl::desc("Gather at most this many values from a LHS to use as synthesis inputs (default=10)"),
-    cl::init(10));
-  static cl::opt<unsigned> CostFudge("souper-enumerative-synthesis-cost-fudge",
-    cl::desc("Generate guesses costing LHS + N (default=0)"),
-    cl::init(0));
-  static cl::opt<bool> OnlyInferI1("souper-only-infer-i1",
-    cl::desc("Only infer integer constants with width 1 (default=false)"),
-    cl::init(false));
-  static cl::opt<bool> OnlyInferIN("souper-only-infer-iN",
-    cl::desc("Only infer integer constants (default=false)"),
-    cl::init(false));
-  static cl::opt<bool> TryShrinkConsts("souper-shrink-consts",
-    cl::desc("Try to shrink constants (defaults=false)"),
-    cl::init(false));
-  static cl::opt<bool> SynthesizeLop3("souper-synthesize-lop3",
-    cl::desc("Generate Lop3 (default=false)"),
-    cl::init(false));
-  static cl::opt<bool> OnlySynthesizeLop3("souper-only-synthesize-lop3",
-    cl::desc("Only synthesize lop3(default=false)"),
-    cl::init(false));
+  static unsigned MaxNumInstructions = 1;
+  // static cl::opt<unsigned> MaxNumInstructions("souper-enumerative-synthesis-max-instructions",
+  //   cl::desc("Maximum number of instructions to synthesize (default=1)."),
+  //   cl::init(1));
+  static unsigned MaxV = 300;
+  // static cl::opt<unsigned> MaxV("souper-enumerative-synthesis-max-verification-load",
+  //   cl::desc("Maximum number of guesses verified at once (default=300)."),
+  //   cl::init(300));
+  static bool AliveFlagParser = false;
+  // static cl::opt<bool, /*ExternalStorage=*/true>
+  //   AliveFlagParser("souper-use-alive", cl::desc("Use Alive2 as the backend"),
+  //   cl::Hidden, cl::location(UseAlive), cl::init(false));
+  static bool LSBPruning = false;
+  // static cl::opt<bool> LSBPruning("souper-lsb-pruning",
+  //   cl::desc("Try to prune guesses by looking for a difference in LSB"),
+  //   cl::init(false));
+  static bool EnableDataflowPruning = false;
+  // static cl::opt<bool> EnableDataflowPruning("souper-dataflow-pruning",
+  //   cl::desc("Enable pruning based on dataflow analysis (default=false)"),
+  //   cl::init(false));
+  static bool SynthesisConstWithCegisLoop = true;
+  // static cl::opt<bool> SynthesisConstWithCegisLoop("souper-synthesis-const-with-cegis",
+  //   cl::desc("Synthesis constants with CEGIS (default=false)"),
+  //   cl::init(true));
+  static bool DoubleCheckWithAlive = false;
+  // static cl::opt<bool> DoubleCheckWithAlive("souper-double-check",
+  //   cl::desc("Double check synthesis result with alive (default=false)"),
+  //   cl::init(false));
+  static bool SkipSolver = false;
+  // static cl::opt<bool> SkipSolver("souper-enumerative-synthesis-skip-solver",
+  //   cl::desc("Skip refinement check after generating guesses (default=false)"),
+  //   cl::init(false));
+  static bool IgnoreCost = false;
+  // static cl::opt<bool> IgnoreCost("souper-enumerative-synthesis-ignore-cost",
+  //   cl::desc("Ignore cost of RHSs -- just generate them (default=false)"),
+  //   cl::init(false));
+  static bool ExternalUses = false;
+  // static cl::opt<bool> ExternalUses("souper-enumerative-synthesis-external-uses",
+  //   cl::desc("Ignore cost of values with external uses(default=true)"),
+  //   cl::init(false)); // FIXME Change back before merging
+  static bool SynFreeze = false;
+  // static cl::opt<bool> SynFreeze("souper-synthesize-freeze",
+  //   cl::desc("Generate Freeze (default=false)"),
+  //   cl::init(false));
+  static bool SynLog = false;
+  // static cl::opt<bool> SynLog("souper-synthesize-log",
+  //   cl::desc("Generate LogB (default=false)"),
+  //   cl::init(false));
+  static unsigned MaxLHSCands = 10;
+  // static cl::opt<unsigned> MaxLHSCands("souper-max-lhs-cands",
+  //   cl::desc("Gather at most this many values from a LHS to use as synthesis inputs (default=10)"),
+  //   cl::init(10));
+  static unsigned CostFudge = 0;
+  // static cl::opt<unsigned> CostFudge("souper-enumerative-synthesis-cost-fudge",
+  //   cl::desc("Generate guesses costing LHS + N (default=0)"),
+  //   cl::init(0));
+  static bool OnlyInferI1 = false;
+  // static cl::opt<bool> OnlyInferI1("souper-only-infer-i1",
+  //   cl::desc("Only infer integer constants with width 1 (default=false)"),
+  //   cl::init(false));
+  static bool OnlyInferIN = false;
+  // static cl::opt<bool> OnlyInferIN("souper-only-infer-iN",
+  //   cl::desc("Only infer integer constants (default=false)"),
+  //   cl::init(false));
+  static bool TryShrinkConsts = false;
+  // static cl::opt<bool> TryShrinkConsts("souper-shrink-consts",
+  //   cl::desc("Try to shrink constants (defaults=false)"),
+  //   cl::init(false));
+  static bool SynthesizeLop3 = false;
+  // static cl::opt<bool> SynthesizeLop3("souper-synthesize-lop3",
+  //   cl::desc("Generate Lop3 (default=false)"),
+  //   cl::init(false));
+  static bool OnlySynthesizeLop3 = false;
+  // static cl::opt<bool> OnlySynthesizeLop3("souper-only-synthesize-lop3",
+  //   cl::desc("Only synthesize lop3(default=false)"),
+  //   cl::init(false));
 }
 
 // TODO

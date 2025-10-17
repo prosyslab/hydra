@@ -37,21 +37,25 @@ bool startsWith(const std::string &pre, const std::string &str) {
 
 namespace {
 
-static llvm::cl::opt<bool> DisableUndefInput("alive-disable-undef-input",
-  llvm::cl::desc("Assume inputs can not be undef (default = false)"),
-  llvm::cl::init(true));
+static bool DisableUndefInput = true;
+// static llvm::cl::opt<bool> DisableUndefInput("alive-disable-undef-input",
+//   llvm::cl::desc("Assume inputs can not be undef (default = false)"),
+//   llvm::cl::init(true));
 
-static llvm::cl::opt<bool> SkipAliveSolver("alive-skip-solver",
-  llvm::cl::desc("Omit Alive solver calls for performance testing (default = false)"),
-  llvm::cl::init(false));
+static bool SkipAliveSolver = false;
+// static llvm::cl::opt<bool> SkipAliveSolver("alive-skip-solver",
+//   llvm::cl::desc("Omit Alive solver calls for performance testing (default = false)"),
+//   llvm::cl::init(false));
 
-static llvm::cl::opt<bool> WidthIndepOpt("alive-all-widths",
-  llvm::cl::desc("Ignore Souper type widths and verify for all widths."),
-  llvm::cl::init(false));
+static bool WidthIndepOpt = false;
+// static llvm::cl::opt<bool> WidthIndepOpt("alive-all-widths",
+//   llvm::cl::desc("Ignore Souper type widths and verify for all widths."),
+//   llvm::cl::init(false));
 
-static llvm::cl::opt<bool> ShowValidWidths("show-valid-widths",
-  llvm::cl::desc("Show widths for which the input is valid."),
-  llvm::cl::init(false));
+static bool ShowValidWidths = false;
+// static llvm::cl::opt<bool> ShowValidWidths("show-valid-widths",
+//   llvm::cl::desc("Show widths for which the input is valid."),
+//   llvm::cl::init(false));
 
 
 class FunctionBuilder {

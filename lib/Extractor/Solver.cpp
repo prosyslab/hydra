@@ -46,21 +46,26 @@ using namespace llvm;
 
 namespace {
 
-static cl::opt<bool> NoInfer("souper-no-infer",
-    cl::desc("Populate the external cache, but don't infer replacements (default=false)"),
-    cl::init(false));
-static cl::opt<bool> UseCegis("souper-use-cegis",
-    cl::desc("Infer instructions (default=false)"),
-    cl::init(false));
-static cl::opt<int> MaxLHSSize("souper-max-lhs-size",
-    cl::desc("Max size of LHS (in bytes) to put in external cache (default=1024)"),
-    cl::init(1024));
-static cl::opt<int> MaxConstantSynthesisTries("souper-max-constant-synthesis-tries",
-    cl::desc("Max number of constant synthesis tries. (default=30)"),
-    cl::init(30));
-static cl::opt<bool> InferInv("souper-infer-invariants",
-    cl::desc("Infer instructions (default=false)"),
-    cl::init(false));
+static bool NoInfer = false;
+// static cl::opt<bool> NoInfer("souper-no-infer",
+//     cl::desc("Populate the external cache, but don't infer replacements (default=false)"),
+//     cl::init(false));
+static bool UseCegis = false;
+// static cl::opt<bool> UseCegis("souper-use-cegis",
+//     cl::desc("Infer instructions (default=false)"),
+//     cl::init(false));
+static int MaxLHSSize = 1024;
+// static cl::opt<int> MaxLHSSize("souper-max-lhs-size",
+//     cl::desc("Max size of LHS (in bytes) to put in external cache (default=1024)"),
+//     cl::init(1024));
+static int MaxConstantSynthesisTries = 30;
+// static cl::opt<int> MaxConstantSynthesisTries("souper-max-constant-synthesis-tries",
+//     cl::desc("Max number of constant synthesis tries. (default=30)"),
+//     cl::init(30));
+static bool InferInv = false;
+// static cl::opt<bool> InferInv("souper-infer-invariants",
+//     cl::desc("Infer instructions (default=false)"),
+//     cl::init(false));
 
 
 class BaseSolver : public Solver {

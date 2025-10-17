@@ -10,7 +10,7 @@ using namespace llvm;
 namespace klee {
 
 // Provide the SolvingCat category
-cl::OptionCategory SolvingCat("Constraint solving options", "These options control the constraint solver.");
+cl::OptionCategory SolvingCat("Constraint solving option", "These options control the constraint solver.");
 
 // Provide minimal implementations of required command line options
 cl::opt<bool> UseFastCexSolver("use-fast-cex-solver", cl::init(false), cl::cat(SolvingCat));

@@ -24,12 +24,14 @@ extern unsigned DebugLevel;
 
 namespace {
   using namespace llvm;
-  static cl::opt<bool> EnableConcreteInterpreter("souper-constant-synthesis-use-concrete-interpreter",
-    cl::desc("Use concrete interpreter in constant synthesis (default=false)"),
-    cl::init(false));
-  static cl::opt<unsigned> MaxSpecializations("souper-constant-synthesis-max-num-specializations",
-    cl::desc("Maximum number of input specializations in constant synthesis (default=15)."),
-    cl::init(15));
+  static bool EnableConcreteInterpreter = false;
+  // static cl::opt<bool> EnableConcreteInterpreter("souper-constant-synthesis-use-concrete-interpreter",
+  //   cl::desc("Use concrete interpreter in constant synthesis (default=false)"),
+  //   cl::init(false));
+  static unsigned MaxSpecializations = 15;
+  // static cl::opt<unsigned> MaxSpecializations("souper-constant-synthesis-max-num-specializations",
+  //   cl::desc("Maximum number of input specializations in constant synthesis (default=15)."),
+  //   cl::init(15));
 }
 
 namespace souper {

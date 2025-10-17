@@ -20,64 +20,77 @@
 
 extern unsigned DebugLevel;
 
-static llvm::cl::opt<bool> ReduceKBIFY("reduce-kbify",
-    llvm::cl::desc("Try to reduce the number of instructions by introducing known bits constraints."
-                   "(default=false)"),
-    llvm::cl::init(true));
+static bool ReduceKBIFY = true;
+// static llvm::cl::opt<bool> ReduceKBIFY("reduce-kbify",
+//     llvm::cl::desc("Try to reduce the number of instructions by introducing known bits constraints."
+//                    "(default=false)"),
+//     llvm::cl::init(true));
 
-static llvm::cl::opt<bool> FindConstantRelations("relational",
-    llvm::cl::desc("Find constant relations."
-                   "(default=true)"),
-    llvm::cl::init(true));
+static bool FindConstantRelations = true;
+// static llvm::cl::opt<bool> FindConstantRelations("relational",
+//     llvm::cl::desc("Find constant relations."
+//                    "(default=true)"),
+//     llvm::cl::init(true));
 
-static llvm::cl::opt<size_t> SymbolizeNumInsts("symbolize-num-insts",
-    llvm::cl::desc("Number of instructions to synthesize"
-                   "(default=1)"),
-    llvm::cl::init(1));
+static size_t SymbolizeNumInsts = 1;
+// static llvm::cl::opt<size_t> SymbolizeNumInsts("symbolize-num-insts",
+//     llvm::cl::desc("Number of instructions to synthesize"
+//                    "(default=1)"),
+//     llvm::cl::init(1));
 
-static llvm::cl::opt<bool> SymbolizeConstSynthesis("symbolize-constant-synthesis",
-    llvm::cl::desc("Allow concrete constants in the generated code."),
-    llvm::cl::init(false));
+static bool SymbolizeConstSynthesis = false;
+// static llvm::cl::opt<bool> SymbolizeConstSynthesis("symbolize-constant-synthesis",
+//     llvm::cl::desc("Allow concrete constants in the generated code."),
+//     llvm::cl::init(false));
 
-static llvm::cl::opt<bool> FixIt("fixit",
-    llvm::cl::desc("Given an invalid optimization, generate a valid one."
-                   "(default=false)"),
-    llvm::cl::init(false));
+static bool FixIt = false;
+// static llvm::cl::opt<bool> FixIt("fixit",
+//     llvm::cl::desc("Given an invalid optimization, generate a valid one."
+//                    "(default=false)"),
+//     llvm::cl::init(false));
 
-static llvm::cl::opt<bool> NoShrink("no-shrink",
-    llvm::cl::desc("No not reduce width before generalization."
-                   "(default=false)"),
-    llvm::cl::init(false));
+static bool NoShrink = false;
+// static llvm::cl::opt<bool> NoShrink("no-shrink",
+//     llvm::cl::desc("No not reduce width before generalization."
+//                    "(default=false)"),
+//     llvm::cl::init(false));
 
 using namespace llvm;
 
-static cl::opt<size_t> NumResults("generalization-num-results",
-    cl::desc("Number of Generalization Results"),
-    cl::init(1));
+static size_t NumResults = 1;
+// static cl::opt<size_t> NumResults("generalization-num-results",
+//     cl::desc("Number of Generalization Results"),
+//     cl::init(1));
 
-static cl::opt<bool> JustReduce("just-reduce",
-    cl::desc("JustReduce"),
-    cl::init(false));
+static bool JustReduce = false;
+// static cl::opt<bool> JustReduce("just-reduce",
+//     cl::desc("JustReduce"),
+//     cl::init(false));
 
-static cl::opt<bool> Basic("basic",
-    cl::desc("Run all fast techniques."),
-    cl::init(true));
+static bool Basic = true;
+// static cl::opt<bool> Basic("basic",
+//     cl::desc("Run all fast techniques."),
+//     cl::init(true));
 
-static cl::opt<bool> OnlyWidth("only-width",
-    cl::desc("Only infer width checks, no synthesis."),
-    cl::init(false));
+static bool OnlyWidth = false;
+// static cl::opt<bool> OnlyWidth("only-width",
+//     cl::desc("Only infer width checks, no synthesis."),
+//     cl::init(false));
 
-static cl::opt<bool> NoWidth("no-width",
-    cl::desc("No width independence checks."),
-    cl::init(false));
+static bool NoWidth = false;
+// static cl::opt<bool> NoWidth("no-width",
+//     cl::desc("No width independence checks."),
+//     cl::init(false));
 
-static cl::opt<bool> SymbolicDF("symbolic-df",
-    cl::desc("Generalize with symbolic dataflow facts."),
-    cl::init(true));
+static bool SymbolicDF = true;
+// static cl::opt<bool> SymbolicDF("symbolic-df",
+//     cl::desc("Generalize with symbolic dataflow facts."),
+//     cl::init(true));
 
-static cl::opt<bool> IgnoreCost("generalize-ignore-cost",
-    cl::desc("Ignore cost, generalize patterns that are not cheaper."),
-    cl::init(false));
+static bool IgnoreCost = false;
+// static cl::opt<bool> IgnoreCost("generalize-ignore-cost",
+//     cl::desc("Ignore cost, generalize patterns that are not cheaper."),
+//     cl::init(false));
 
 namespace souper {
 

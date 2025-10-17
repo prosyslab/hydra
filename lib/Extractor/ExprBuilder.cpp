@@ -19,13 +19,14 @@
 
 namespace souper {
 
-static llvm::cl::opt<souper::ExprBuilder::Builder> SMTExprBuilder(
-    "souper-smt-expr-builder",
-    llvm::cl::Hidden,
-    llvm::cl::desc("SMT-LIBv2 expression builder (default=klee)"),
-    llvm::cl::values(clEnumValN(souper::ExprBuilder::KLEE, "klee",
-                                "Use KLEE's Expr library")),
-    llvm::cl::init(souper::ExprBuilder::KLEE));
+static souper::ExprBuilder::Builder SMTExprBuilder = souper::ExprBuilder::KLEE;
+// static llvm::cl::opt<souper::ExprBuilder::Builder> SMTExprBuilder(
+//     "souper-smt-expr-builder",
+//     llvm::cl::Hidden,
+//     llvm::cl::desc("SMT-LIBv2 expression builder (default=klee)"),
+//     llvm::cl::values(clEnumValN(souper::ExprBuilder::KLEE, "klee",
+//                                 "Use KLEE's Expr library")),
+//     llvm::cl::init(souper::ExprBuilder::KLEE));
 
 bool ExprBuilder::getUBPaths(Inst *I, UBPath *Current,
                              std::vector<std::unique_ptr<UBPath>> &Paths,

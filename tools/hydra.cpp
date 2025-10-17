@@ -21,12 +21,13 @@
 
 unsigned DebugLevel;
 
-static llvm::cl::opt<unsigned, /*ExternalStorage=*/true>
-DebugFlagParser("souper-debug-level",
-     llvm::cl::desc("Control the verbose level of debug output (default=1). "
-     "The larger the number is, the more fine-grained debug "
-     "information will be printed."),
-     llvm::cl::location(DebugLevel), llvm::cl::init(1));
+static unsigned DebugFlagParser = 1;
+// static llvm::cl::opt<unsigned, /*ExternalStorage=*/true>
+// DebugFlagParser("souper-debug-level",
+//      llvm::cl::desc("Control the verbose level of debug output (default=1). "
+//      "The larger the number is, the more fine-grained debug "
+//      "information will be printed."),
+//      llvm::cl::location(DebugLevel), llvm::cl::init(1));
 
 using namespace llvm;
 

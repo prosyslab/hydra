@@ -29,24 +29,28 @@ static constexpr const char *Z3Path = "@Z3@";
 static_assert(Z3Path[0] != 0 && Z3Path[0] != '@',
               "CMake does not seem to have rewritten the solver path correctly");
 
-static llvm::cl::opt<bool> KeepSolverInputs(
-    "keep-solver-inputs", llvm::cl::desc("Do not clean up solver inputs"),
-    llvm::cl::init(false));
+static bool KeepSolverInputs = false;
+// static llvm::cl::opt<bool> KeepSolverInputs(
+//     "keep-solver-inputs", llvm::cl::desc("Do not clean up solver inputs"),
+//     llvm::cl::init(false));
 
-static llvm::cl::opt<bool> MemCache(
-  "souper-internal-cache",
-  llvm::cl::desc("Cache solver results in memory (default=true)"),
-  llvm::cl::init(true));
+static bool MemCache = true;
+// static llvm::cl::opt<bool> MemCache(
+//   "souper-internal-cache",
+//   llvm::cl::desc("Cache solver results in memory (default=true)"),
+  // llvm::cl::init(true));
 
-static llvm::cl::opt<bool> ExternalCache(
-  "souper-external-cache",
-  llvm::cl::desc("Use external Redis-based cache (default=false)"),
-  llvm::cl::init(false));
+static bool ExternalCache = false;
+// static llvm::cl::opt<bool> ExternalCache(
+//   "souper-external-cache",
+//   llvm::cl::desc("Use external Redis-based cache (default=false)"),
+//   llvm::cl::init(false));
 
-static llvm::cl::opt<int> SolverTimeout(
-  "solver-timeout",
-  llvm::cl::desc("Solver timeout in seconds (default=15)"),
-  llvm::cl::init(15));
+static int SolverTimeout = 15;
+// static llvm::cl::opt<int> SolverTimeout(
+//   "solver-timeout",
+//   llvm::cl::desc("Solver timeout in seconds (default=15)"),
+//   llvm::cl::init(15));
 
 static bool exists_and_executable(const char *fn) {
   return access(fn, X_OK) != -1;

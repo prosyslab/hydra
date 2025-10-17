@@ -27,10 +27,11 @@ using namespace souper;
 
 namespace {
 
-static llvm::cl::opt<bool> DumpKLEEExprs(
-    "dump-klee-exprs",
-    llvm::cl::desc("Dump KLEE expressions after SMTLIB queries"),
-    llvm::cl::init(false));
+static bool DumpKLEEExprs = false;
+// static llvm::cl::opt<bool> DumpKLEEExprs(
+//     "dump-klee-exprs",
+//     llvm::cl::desc("Dump KLEE expressions after SMTLIB queries"),
+//     llvm::cl::init(false));
 
     
     // This vector contains 256 std::function objects, each representing

@@ -464,9 +464,7 @@ target_link_libraries(souper-check
 # target_link_libraries(hydra souperTool souperGeneralize ${Z3_LIBRARY})
 target_link_libraries(hydra
   PRIVATE
-  souperTool
   souperGeneralize # This includes Infer and Extractor, but let's be explicit
-  souperExtractor
   souperInfer
   ${ALIVE_LIBRARY}
   ${Z3_LIBRARY}

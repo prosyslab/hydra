@@ -43,62 +43,76 @@
 #include <tuple>
 #include "llvm/Analysis/ValueTracking.h"
 
-static llvm::cl::opt<bool> ExploitBPCs(
-    "souper-exploit-blockpcs",
-    llvm::cl::desc("Exploit block path conditions (default=false)"),
-    llvm::cl::init(false));
-static llvm::cl::opt<bool> HarvestDataFlowFacts(
-    "souper-harvest-dataflow-facts",
-    llvm::cl::desc("Perform data flow analysis (default=true)"),
-    llvm::cl::init(true));
-static llvm::cl::opt<bool> HarvestUses(
-    "souper-harvest-uses",
-    llvm::cl::desc("Harvest operands (default=false)"),
-    llvm::cl::init(false));
-static llvm::cl::opt<bool> MarkExternalUses(
-    "souper-mark-external-uses",
-    llvm::cl::desc("Mark external uses in harvesting (default=true)"),
-    llvm::cl::init(false));
-static llvm::cl::opt<bool> PrintNegAtReturn(
-    "print-neg-at-return",
-    llvm::cl::desc("Print negative dfa in each value returned from a function (default=false)"),
-    llvm::cl::init(false));
-static llvm::cl::opt<bool> PrintNonNegAtReturn(
-    "print-nonneg-at-return",
-    llvm::cl::desc("Print non-negative dfa in each value returned from a function (default=false)"),
-    llvm::cl::init(false));
-static llvm::cl::opt<bool> PrintKnownAtReturn(
-    "print-known-at-return",
-    llvm::cl::desc("Print known bits in each value returned from a function (default=false)"),
-    llvm::cl::init(false));
-static llvm::cl::opt<bool> PrintPowerTwoAtReturn(
-    "print-power-two-at-return",
-    llvm::cl::desc("Print power two dfa in each value returned from a function (default=false)"),
-    llvm::cl::init(false));
-static llvm::cl::opt<bool> PrintNonZeroAtReturn(
-    "print-non-zero-at-return",
-    llvm::cl::desc("Print non zero dfa in each value returned from a function (default=false)"),
-    llvm::cl::init(false));
-static llvm::cl::opt<bool> PrintSignBitsAtReturn(
-    "print-sign-bits-at-return",
-    llvm::cl::desc("Print sign bits dfa in each value returned from a function (default=false)"),
-    llvm::cl::init(false));
-static llvm::cl::opt<bool> NoExternalUses(
-    "no-external-uses",
-    llvm::cl::desc("Do not mark external uses. (default=false)"),
-    llvm::cl::init(false));
-static llvm::cl::opt<bool> PrintRangeAtReturn(
-    "print-range-at-return",
-    llvm::cl::desc("Print range inforation in each value returned from a function (default=false)"),
-    llvm::cl::init(false));
-static llvm::cl::opt<bool> PrintDemandedBitsAtReturn(
-    "print-demanded-bits-from-harvester",
-    llvm::cl::desc("Print demanded bits (default=false)"),
-    llvm::cl::init(false));
-static llvm::cl::opt<bool> ExtractPhi(
-    "extract-phi",
-    llvm::cl::desc("Follow PHI nodes when extracting from LLVM (default=true)"),
-    llvm::cl::init(true));
+static bool ExploitBPCs = false;
+// static llvm::cl::opt<bool> ExploitBPCs(
+//     "souper-exploit-blockpcs",
+//     llvm::cl::desc("Exploit block path conditions (default=false)"),
+//     llvm::cl::init(false));
+static bool HarvestDataFlowFacts = true;
+// static llvm::cl::opt<bool> HarvestDataFlowFacts(
+//     "souper-harvest-dataflow-facts",
+//     llvm::cl::desc("Perform data flow analysis (default=true)"),
+//     llvm::cl::init(true));
+static bool HarvestUses = false;
+// static llvm::cl::opt<bool> HarvestUses(
+//     "souper-harvest-uses",
+//     llvm::cl::desc("Harvest operands (default=false)"),
+//     llvm::cl::init(false));
+static bool MarkExternalUses = false;
+// static llvm::cl::opt<bool> MarkExternalUses(
+//     "souper-mark-external-uses",
+//     llvm::cl::desc("Mark external uses in harvesting (default=true)"),
+//     llvm::cl::init(false));
+static bool PrintNegAtReturn = false;
+// static llvm::cl::opt<bool> PrintNegAtReturn(
+//     "print-neg-at-return",
+//     llvm::cl::desc("Print negative dfa in each value returned from a function (default=false)"),
+//     llvm::cl::init(false));
+static bool PrintNonNegAtReturn = false;
+// static llvm::cl::opt<bool> PrintNonNegAtReturn(
+//     "print-nonneg-at-return",
+//     llvm::cl::desc("Print non-negative dfa in each value returned from a function (default=false)"),
+//     llvm::cl::init(false));
+static bool PrintKnownAtReturn = false;
+// static llvm::cl::opt<bool> PrintKnownAtReturn(
+//     "print-known-at-return",
+//     llvm::cl::desc("Print known bits in each value returned from a function (default=false)"),
+//     llvm::cl::init(false));
+static bool PrintPowerTwoAtReturn = false;
+// static llvm::cl::opt<bool> PrintPowerTwoAtReturn(
+//     "print-power-two-at-return",
+//     llvm::cl::desc("Print power two dfa in each value returned from a function (default=false)"),
+//     llvm::cl::init(false));
+static bool PrintNonZeroAtReturn = false;
+// static llvm::cl::opt<bool> PrintNonZeroAtReturn(
+//     "print-non-zero-at-return",
+//     llvm::cl::desc("Print non zero dfa in each value returned from a function (default=false)"),
+//     llvm::cl::init(false));
+static bool PrintSignBitsAtReturn = false;
+// static llvm::cl::opt<bool> PrintSignBitsAtReturn(
+//     "print-sign-bits-at-return",
+//     llvm::cl::desc("Print sign bits dfa in each value returned from a function (default=false)"),
+//     llvm::cl::init(false));
+static bool NoExternalUses = false;
+// static llvm::cl::opt<bool> NoExternalUses(
+//     "no-external-uses",
+//     llvm::cl::desc("Do not mark external uses. (default=false)"),
+//     llvm::cl::init(false));
+static bool PrintRangeAtReturn = false;
+// static llvm::cl::opt<bool> PrintRangeAtReturn(
+//     "print-range-at-return",
+//     llvm::cl::desc("Print range inforation in each value returned from a function (default=false)"),
+//     llvm::cl::init(false));
+static bool PrintDemandedBitsAtReturn = false;
+// static llvm::cl::opt<bool> PrintDemandedBitsAtReturn(
+//     "print-demanded-bits-from-harvester",
+//     llvm::cl::desc("Print demanded bits (default=false)"),
+//     llvm::cl::init(false));
+static bool ExtractPhi = true;
+// static llvm::cl::opt<bool> ExtractPhi(
+//     "extract-phi",
+//     llvm::cl::desc("Follow PHI nodes when extracting from LLVM (default=true)"),
+//     llvm::cl::init(true));
 
 extern bool UseAlive;
 

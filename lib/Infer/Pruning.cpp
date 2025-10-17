@@ -20,33 +20,40 @@
 #include <cstdlib>
 
 namespace {
-  static llvm::cl::opt<bool> EnableHeavyDataflowPruning("souper-dataflow-pruning-heavy",
-    llvm::cl::desc("Enable all pruning techniques (default=false)"),
-    llvm::cl::init(false));
+  static bool EnableHeavyDataflowPruning = false;
+  // static llvm::cl::opt<bool> EnableHeavyDataflowPruning("souper-dataflow-pruning-heavy",
+  //   llvm::cl::desc("Enable all pruning techniques (default=false)"),
+  //   llvm::cl::init(false));
 
-  static llvm::cl::opt<bool> AbstractInterpretPhi("souper-dataflow-ai-phi",
-    llvm::cl::desc("Abstract interpret Phi instead of assuming first argument (default=false)"),
-    llvm::cl::init(false));
+  static bool AbstractInterpretPhi = false;
+  // static llvm::cl::opt<bool> AbstractInterpretPhi("souper-dataflow-ai-phi",
+  //   llvm::cl::desc("Abstract interpret Phi instead of assuming first argument (default=false)"),
+  //   llvm::cl::init(false));
 
-  static llvm::cl::opt<bool> EnableKB("souper-dataflow-pruning-kb",
-    llvm::cl::desc("Prune with known-bits analysis (default=true)"),
-    llvm::cl::init(true));
+  static bool EnableKB = true;
+  // static llvm::cl::opt<bool> EnableKB("souper-dataflow-pruning-kb",
+  //   llvm::cl::desc("Prune with known-bits analysis (default=true)"),
+  //   llvm::cl::init(true));
 
-  static llvm::cl::opt<bool> EnableCR("souper-dataflow-pruning-cr",
-    llvm::cl::desc("Prune with integer-ranges analysis (default=true)"),
-    llvm::cl::init(true));
+  static bool EnableCR = true;
+  // static llvm::cl::opt<bool> EnableCR("souper-dataflow-pruning-cr",
+  //   llvm::cl::desc("Prune with integer-ranges analysis (default=true)"),
+  //   llvm::cl::init(true));
 
-  static llvm::cl::opt<bool> EnableFB("souper-dataflow-pruning-fb",
-    llvm::cl::desc("Prune with forced-bits analysis (default=true)"),
-    llvm::cl::init(false));
+  static bool EnableFB = false;
+  // static llvm::cl::opt<bool> EnableFB("souper-dataflow-pruning-fb",
+  //   llvm::cl::desc("Prune with forced-bits analysis (default=true)"),
+  //   llvm::cl::init(false));
 
-  static llvm::cl::opt<bool> EnableRB("souper-dataflow-pruning-rb",
-    llvm::cl::desc("Prune with required-bits analysis (default=true)"),
-    llvm::cl::init(true));
+  static bool EnableRB = true;
+  // static llvm::cl::opt<bool> EnableRB("souper-dataflow-pruning-rb",
+  //   llvm::cl::desc("Prune with required-bits analysis (default=true)"),
+  //   llvm::cl::init(true));
 
-  static llvm::cl::opt<bool> EnableBB("souper-dataflow-pruning-bb",
-    llvm::cl::desc("Prune with bivalent-bits analysis (default=true)"),
-    llvm::cl::init(false));
+  static bool EnableBB = false;
+  // static llvm::cl::opt<bool> EnableBB("souper-dataflow-pruning-bb",
+  //   llvm::cl::desc("Prune with bivalent-bits analysis (default=true)"),
+  //   llvm::cl::init(false));
 }
 
 namespace souper {

@@ -21,10 +21,12 @@
 using namespace llvm;
 using namespace souper;
 
-static cl::opt<unsigned> RedisPort("souper-redis-port", cl::init(6379),
-    cl::desc("Redis server port (default=6379)"));
-static cl::opt<bool> UnixSocket("souper-external-cache-unix", cl::init(false),
-    cl::desc("Talk to the cache using UNIX domain sockets (default=false)"));
+static unsigned RedisPort = 6379;
+// static cl::opt<unsigned> RedisPort("souper-redis-port", cl::init(6379),
+//     cl::desc("Redis server port (default=6379)"));
+static bool UnixSocket = false;
+// static cl::opt<bool> UnixSocket("souper-external-cache-unix", cl::init(false),
+//     cl::desc("Talk to the cache using UNIX domain sockets (default=false)"));
 
 static const int MAX_RETRIES = 5;
 

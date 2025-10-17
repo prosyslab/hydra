@@ -33,14 +33,14 @@ namespace souper {
 
 using namespace souper;
 
-unsigned DebugLevel;
+unsigned DebugLevel = 1;
 
-static cl::opt<unsigned, /*ExternalStorage=*/true>
-DebugFlagParser("souper-debug-level",
-     cl::desc("Control the verbose level of debug output (default=1). "
-     "The larger the number is, the more fine-grained debug "
-     "information will be printed."),
-     cl::location(DebugLevel), cl::init(1));
+// static cl::opt<unsigned, /*ExternalStorage=*/true>
+// DebugFlagParser("souper-debug-level",
+//      cl::desc("Control the verbose level of debug output (default=1). "
+//      "The larger the number is, the more fine-grained debug "
+//      "information will be printed."),
+//      cl::location(DebugLevel), cl::init(1));
 
 static cl::opt<std::string>
 InputFilename(cl::Positional, cl::desc("<input souper optimization>"),

@@ -19,37 +19,45 @@
 
 using namespace llvm;
 
-static cl::opt<bool> InferNeg("infer-neg",
-    cl::desc("Compute Negative for the candidate (default=false)"),
-    cl::init(false));
+static bool InferNeg = false;
+// static cl::opt<bool> InferNeg("infer-neg",
+//     cl::desc("Compute Negative for the candidate (default=false)"),
+//     cl::init(false));
 
-static cl::opt<bool> InferKnownBits("infer-known-bits",
-    cl::desc("Compute known bits for the candidate (default=false)"),
-    cl::init(false));
+static bool InferKnownBits = false;
+// static cl::opt<bool> InferKnownBits("infer-known-bits",
+//     cl::desc("Compute known bits for the candidate (default=false)"),
+//     cl::init(false));
 
-static cl::opt<bool> InferNonNeg("infer-non-neg",
-   cl::desc("Compute non-negative for the candidate (default=false)"),
-    cl::init(false));
+static bool InferNonNeg = false;
+// static cl::opt<bool> InferNonNeg("infer-non-neg",
+//    cl::desc("Compute non-negative for the candidate (default=false)"),
+//     cl::init(false));
 
-static cl::opt<bool> InferPowerTwo("infer-power-two",
-    cl::desc("Compute power of two for the candidate (default=false)"),
-    cl::init(false));
+static bool InferPowerTwo = false;
+// static cl::opt<bool> InferPowerTwo("infer-power-two",
+//     cl::desc("Compute power of two for the candidate (default=false)"),
+//     cl::init(false));
 
-static cl::opt<bool> InferNonZero("infer-non-zero",
-    cl::desc("Compute non zero for the candidate (default=false)"),
-    cl::init(false));
+static bool InferNonZero = false;
+// static cl::opt<bool> InferNonZero("infer-non-zero",
+//     cl::desc("Compute non zero for the candidate (default=false)"),
+//     cl::init(false));
 
-static cl::opt<bool> InferSignBits("infer-sign-bits",
-    cl::desc("Compute sign bits for the candidate (default=false)"),
-    cl::init(false));
+static bool InferSignBits = false;
+// static cl::opt<bool> InferSignBits("infer-sign-bits",
+//     cl::desc("Compute sign bits for the candidate (default=false)"),
+//     cl::init(false));
 
-static cl::opt<bool> InferRange("infer-range",
-    cl::desc("Compute range for the candidate (default=false)"),
-    cl::init(false));
+static bool InferRange = false;
+// static cl::opt<bool> InferRange("infer-range",
+//     cl::desc("Compute range for the candidate (default=false)"),
+//     cl::init(false));
 
-static cl::opt<bool> InferDemandedBits("infer-demanded-bits",
-    cl::desc("Compute demanded bits for the candidate (default=false)"),
-    cl::init(false));
+static bool InferDemandedBits = false;
+// static cl::opt<bool> InferDemandedBits("infer-demanded-bits",
+//     cl::desc("Compute demanded bits for the candidate (default=false)"),
+//     cl::init(false));
 
 static bool isInferDFA() {
   return InferNeg || InferNonNeg || InferKnownBits || InferPowerTwo ||

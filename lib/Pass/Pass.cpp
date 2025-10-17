@@ -55,36 +55,41 @@ Solver *S; // hack for now
 using namespace souper;
 using namespace llvm;
 
-unsigned DebugLevel;
+unsigned DebugLevel = 1;
 
 namespace {
 std::unique_ptr<Solver> S_; // hack for now
 unsigned ReplacementIdx, ReplacementsDone, LHSNum;
 KVStore *KV;
 
-static cl::opt<unsigned, /*ExternalStorage=*/true>
-DebugFlagParser("souper-debug-level",
-     cl::desc("Control the verbose level of debug output (default=1). "
-     "The larger the number is, the more fine-grained debug "
-     "information will be printed."),
-     cl::location(DebugLevel), cl::init(1));
+// static cl::opt<unsigned, /*ExternalStorage=*/true>
+// DebugFlagParser("souper-debug-level",
+//      cl::desc("Control the verbose level of debug output (default=1). "
+//      "The larger the number is, the more fine-grained debug "
+//      "information will be printed."),
+//      cl::location(DebugLevel), cl::init(1));
+//
+static bool Verify = false;
+// static cl::opt<bool> Verify("souper-verify", cl::init(false),
+//     cl::desc("Verify functions before Souper processes them (default=false)"));
 
-static cl::opt<bool> Verify("souper-verify", cl::init(false),
-    cl::desc("Verify functions before Souper processes them (default=false)"));
+static bool DynamicProfile = false;
+// static cl::opt<bool> DynamicProfile("souper-dynamic-profile", cl::init(false),
+//     cl::desc("Dynamic profiling of Souper optimizations (default=false)"));
 
-static cl::opt<bool> DynamicProfile("souper-dynamic-profile", cl::init(false),
-    cl::desc("Dynamic profiling of Souper optimizations (default=false)"));
+static bool StaticProfile = false;
+// static cl::opt<bool> StaticProfile("souper-static-profile", cl::init(false),
+//     cl::desc("Static profiling of Souper optimizations (default=false)"));
 
-static cl::opt<bool> StaticProfile("souper-static-profile", cl::init(false),
-    cl::desc("Static profiling of Souper optimizations (default=false)"));
+static unsigned FirstReplace = 0;
+// static cl::opt<unsigned> FirstReplace("souper-first-opt", cl::Hidden,
+//     cl::init(0),
+//     cl::desc("First Souper optimization to perform (default=0)"));
 
-static cl::opt<unsigned> FirstReplace("souper-first-opt", cl::Hidden,
-    cl::init(0),
-    cl::desc("First Souper optimization to perform (default=0)"));
-
-static cl::opt<unsigned> LastReplace("souper-last-opt", cl::Hidden,
-    cl::init(std::numeric_limits<unsigned>::max()),
-    cl::desc("Last Souper optimization to perform (default=infinite)"));
+static unsigned LastReplace = std::numeric_limits<unsigned>::max();
+// static cl::opt<unsigned> LastReplace("souper-last-opt", cl::Hidden,
+//     cl::init(std::numeric_limits<unsigned>::max()),
+//     cl::desc("Last Souper optimization to perform (default=infinite)"));
 
 #ifdef DYNAMIC_PROFILE_ALL
 static const bool DynamicProfileAll = true;

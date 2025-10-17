@@ -442,8 +442,6 @@ target_link_libraries(souperPassProfileAll ${PASS_LDFLAGS} ${HIREDIS_LIBRARY} ${
 # target_link_libraries(souper souperInfer souperTool ${Z3_LIBRARY})
 target_link_libraries(souper
   PRIVATE
-  souperTool
-  souperExtractor
   souperInfer
   ${ALIVE_LIBRARY} # Add this to ensure Alive2 libs are directly linked
   ${Z3_LIBRARY}
@@ -454,8 +452,6 @@ target_link_libraries(parser-test souperParser)
 # target_link_libraries(souper-check souperInfer souperTool kleeExpr ${Z3_LIBRARY})
 target_link_libraries(souper-check
   PRIVATE
-  souperTool
-  souperExtractor
   souperInfer
   kleeExpr
   ${ALIVE_LIBRARY}
@@ -473,9 +469,6 @@ target_link_libraries(hydra
 target_link_libraries(matcher-gen
   PRIVATE
   souperGeneralize # Provides souper::profit
-  souperTool
-  souperExtractor
-  souperInfer
   souperParser     # Provides souper::InfixPrinter
   ${ALIVE_LIBRARY}
   ${Z3_LIBRARY}
@@ -483,8 +476,6 @@ target_link_libraries(matcher-gen
 # target_link_libraries(souper-interpret souperTool ${Z3_LIBRARY})
 target_link_libraries(souper-interpret
   PRIVATE
-  souperTool
-  souperExtractor
   souperInfer      #<-- Provides the missing Interpreter and Analysis functions
   ${ALIVE_LIBRARY}
   ${Z3_LIBRARY}

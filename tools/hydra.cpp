@@ -21,7 +21,7 @@
 
 unsigned DebugLevel;
 
-static unsigned DebugFlagParser = 1;
+static unsigned DebugFlagParser = 2;
 // static llvm::cl::opt<unsigned, /*ExternalStorage=*/true>
 // DebugFlagParser("souper-debug-level",
 //      llvm::cl::desc("Control the verbose level of debug output (default=1). "

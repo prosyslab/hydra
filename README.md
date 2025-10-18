@@ -1,3 +1,14 @@
+# TL;DR 
+
+```
+fish build.fish
+fish exp.fish
+
+cd hydra-outputs
+rg "Generalized" | wc -l
+```
+
+
 Hydra is based on [Souper](https://github.com/google/souper)
 
 # Requirements

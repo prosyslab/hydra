@@ -55,7 +55,7 @@ Solver *S; // hack for now
 using namespace souper;
 using namespace llvm;
 
-unsigned DebugLevel = 1;
+unsigned DebugLevel = 2;
 
 namespace {
 std::unique_ptr<Solver> S_; // hack for now

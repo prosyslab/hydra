@@ -1,0 +1,7 @@
+%x:i8 = var
+%a:i8 = mul %x, 5
+%b:i1 = eq %a, 30
+infer %b
+%0:i1 = eq %x, 6
+result %0
+

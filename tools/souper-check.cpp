@@ -33,7 +33,7 @@ namespace souper {
 
 using namespace souper;
 
-unsigned DebugLevel = 1;
+unsigned DebugLevel = 2;
 
 // static cl::opt<unsigned, /*ExternalStorage=*/true>
 // DebugFlagParser("souper-debug-level",

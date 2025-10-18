@@ -19,7 +19,7 @@
 #include <optional>
 
 
-unsigned DebugLevel;
+unsigned DebugLevel = 2;
 
 static unsigned DebugFlagParser = 2;
 // static llvm::cl::opt<unsigned, /*ExternalStorage=*/true>
